@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Công cụ tính cân nặng lý tưởng</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Cân nặng">
+<meta name="theme-color" content="#16554B">
+<meta name="description" content="Công cụ tính cân nặng lý tưởng theo BMI, gợi ý vận động và dinh dưỡng.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #EEF1EC;
+    --paper: #FBFCFA;
+    --ink: #1C2B27;
+    --ink-soft: #55655F;
+    --teal: #16554B;
+    --teal-deep: #0E3A33;
+    --gold: #B98A2E;
+    --rose: #A93E33;
+    --line: #D6DCD4;
+    --tick: #9FB0A8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    padding:calc(32px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(64px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:920px;margin:0 auto;}
+
+  .masthead{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    border-bottom:2px solid var(--teal-deep);
+    padding-bottom:14px;
+    margin-bottom:28px;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .masthead .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--teal);
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:clamp(26px,4vw,38px);
+    margin:4px 0 0;
+    letter-spacing:-.01em;
+    color:var(--teal-deep);
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns: 1.1fr 1.4fr;
+    gap:24px;
+  }
+  @media (max-width:760px){ .grid{grid-template-columns:1fr;} }
+
+  .card{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:22px 24px;
+  }
+
+  .field{margin-bottom:18px;}
+  label{
+    display:block;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+    font-weight:500;
+  }
+  .seg{
+    display:flex;
+    border:1px solid var(--teal);
+    border-radius:3px;
+    overflow:hidden;
+  }
+  .seg button{
+    flex:1;
+    padding:9px 0;
+    border:none;
+    background:var(--paper);
+    color:var(--teal-deep);
+    font-family:'IBM Plex Sans';
+    font-size:14px;
+    font-weight:500;
+    cursor:pointer;
+    transition:.15s;
+  }
+  .seg button + button{border-left:1px solid var(--teal);}
+  .seg button.active{background:var(--teal);color:#fff;}
+
+  input[type=number]{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:16px;
+    color:var(--ink);
+    background:#fff;
+  }
+  input[type=number]:focus{outline:2px solid var(--teal);outline-offset:1px;}
+
+  .unit{font-size:12px;color:var(--ink-soft);margin-left:6px;}
+
+  .btn-calc{
+    margin-top:6px;
+    width:100%;
+    padding:12px 0;
+    background:var(--teal-deep);
+    color:#fff;
+    border:none;
+    border-radius:3px;
+    font-family:'IBM Plex Sans';
+    font-weight:600;
+    font-size:15px;
+    letter-spacing:.02em;
+    cursor:pointer;
+  }
+  .btn-calc:hover{background:var(--teal);}
+
+  /* ---- result panel ---- */
+  .result-top{
+    display:flex;
+    gap:20px;
+    align-items:stretch;
+  }
+  .gauge-col{
+    flex:0 0 74px;
+    position:relative;
+  }
+  .gauge-track{
+    position:relative;
+    width:22px;
+    height:260px;
+    margin:0 auto;
+    border-radius:11px;
+    background:linear-gradient(to top,
+      var(--gold) 0%, var(--gold) 12%,
+      var(--teal) 12%, var(--teal) 55%,
+      var(--gold) 55%, var(--gold) 72%,
+      var(--rose) 72%, var(--rose) 100%);
+    border:1px solid var(--line);
+  }
+  .tick{
+    position:absolute;
+    left:-8px;
+    width:38px;
+    height:1px;
+    background:var(--tick);
+  }
+  .tick span{
+    position:absolute;
+    left:40px;
+    top:-7px;
+    font-family:'IBM Plex Mono';
+    font-size:10px;
+    color:var(--ink-soft);
+    white-space:nowrap;
+  }
+  .marker{
+    position:absolute;
+    left:50%;
+    transform:translate(-50%,50%);
+    width:0; height:0;
+    border-top:9px solid transparent;
+    border-bottom:9px solid transparent;
+    border-right:12px solid var(--ink);
+    transition:bottom .4s ease;
+  }
+  .marker-label{
+    position:absolute;
+    left:34px;
+    transform:translateY(50%);
+    font-family:'IBM Plex Mono';
+    font-weight:600;
+    font-size:13px;
+    background:var(--ink);
+    color:#fff;
+    padding:2px 6px;
+    border-radius:2px;
+    white-space:nowrap;
+    transition:bottom .4s ease;
+  }
+
+  .result-main{flex:1;}
+  .bmi-readout{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:56px;
+    line-height:1;
+    color:var(--teal-deep);
+  }
+  .bmi-cat{
+    font-family:'IBM Plex Mono';
+    font-size:13px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    margin-top:6px;
+    display:inline-block;
+    padding:3px 8px;
+    border-radius:2px;
+  }
+  .cat-under{background:#F4E9D2;color:#7A5A16;}
+  .cat-normal{background:#DCEAE4;color:var(--teal-deep);}
+  .cat-over{background:#F4E9D2;color:#7A5A16;}
+  .cat-obese{background:#F2DCD8;color:var(--rose);}
+
+  .delta-box{
+    margin-top:18px;
+    padding-top:16px;
+    border-top:1px dashed var(--line);
+  }
+  .delta-num{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:30px;
+    color:var(--ink);
+  }
+  .delta-desc{font-size:14px;color:var(--ink-soft);margin-top:2px;}
+
+  .range-line{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin-top:14px;
+  }
+  .range-line b{color:var(--ink);font-family:'IBM Plex Mono';}
+
+  .footnote{
+    margin-top:28px;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    line-height:1.6;
+    border-top:1px solid var(--line);
+    padding-top:14px;
+  }
+  .footnote b{color:var(--ink);}
+
+  .placeholder{
+    color:var(--ink-soft);
+    font-size:14px;
+    padding:40px 0;
+    text-align:center;
+  }
+
+  .tips-card{
+    margin-top:20px;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:22px 24px;
+    display:none;
+  }
+  .tips-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:16px;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .tips-head .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--teal);
+  }
+  .tips-head h2{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:21px;
+    margin:2px 0 0;
+    color:var(--teal-deep);
+  }
+  .tips-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+  }
+  @media (max-width:760px){ .tips-grid{grid-template-columns:1fr;} }
+  .tips-col h3{
+    font-family:'IBM Plex Sans';
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--ink-soft);
+    margin:0 0 10px;
+    padding-bottom:6px;
+    border-bottom:1px solid var(--line);
+  }
+  .tips-col ul{
+    margin:0;
+    padding-left:18px;
+  }
+  .tips-col li{
+    font-size:14.5px;
+    line-height:1.55;
+    margin-bottom:9px;
+    color:var(--ink);
+  }
+  .tips-col li b{color:var(--teal-deep);}
+  .tips-note{
+    margin-top:16px;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    line-height:1.6;
+    border-top:1px dashed var(--line);
+    padding-top:12px;
+  }
+
+  .col-head{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:10px;
+    padding-bottom:6px;
+    border-bottom:1px solid var(--line);
+  }
+  .col-head svg{flex:0 0 auto;}
+  .col-head h3{
+    margin:0;
+    padding:0;
+    border:none;
+  }
+
+  .links-wrap{
+    margin-top:22px;
+    padding-top:18px;
+    border-top:1px solid var(--line);
+  }
+  .links-eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--teal);
+    margin-bottom:12px;
+  }
+  .links-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+  }
+  @media (max-width:760px){ .links-grid{grid-template-columns:1fr;} }
+  .link-card{
+    display:flex;
+    gap:12px;
+    align-items:flex-start;
+    padding:12px 14px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    text-decoration:none;
+    color:var(--ink);
+    transition:.15s;
+  }
+  .link-card:hover{border-color:var(--teal);background:#F4F8F6;}
+  .link-card svg{flex:0 0 auto;margin-top:2px;}
+  .link-card .lc-title{
+    font-weight:600;
+    font-size:14px;
+    color:var(--teal-deep);
+    display:block;
+    margin-bottom:2px;
+  }
+  .link-card .lc-desc{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    line-height:1.5;
+  }
+  .link-card .lc-arrow{
+    margin-left:auto;
+    color:var(--ink-soft);
+    font-size:14px;
+    align-self:center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <div>
+      <div class="eyebrow">Sổ tay sức khỏe · Chỉ số cơ thể</div>
+      <h1>Cân nặng lý tưởng của bạn</h1>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- FORM -->
+    <div class="card">
+      <div class="field">
+        <label>Giới tính</label>
+        <div class="seg" id="genderSeg">
+          <button data-val="nam" class="active">Nam</button>
+          <button data-val="nu">Nữ</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Tuổi <span class="unit">(năm)</span></label>
+        <input type="number" id="age" placeholder="Ví dụ: 32" min="2" max="110">
+      </div>
+
+      <div class="field">
+        <label>Chiều cao <span class="unit">(cm)</span></label>
+        <input type="number" id="height" placeholder="Ví dụ: 165" min="80" max="230">
+      </div>
+
+      <div class="field">
+        <label>Cân nặng hiện tại <span class="unit">(kg)</span></label>
+        <input type="number" id="weight" placeholder="Ví dụ: 62" min="20" max="250" step="0.1">
+      </div>
+
+      <button class="btn-calc" onclick="tinhToan()">Tính kết quả</button>
+    </div>
+
+    <!-- RESULT -->
+    <div class="card" id="resultCard">
+      <div class="placeholder">Nhập thông tin bên trái và bấm "Tính kết quả" để xem chỉ số BMI, khoảng cân nặng khỏe mạnh và số kg nên tăng/giảm.</div>
+    </div>
+  </div>
+
+  <div class="tips-card" id="tipsCard">
+    <div class="tips-head">
+      <div>
+        <div class="eyebrow">Gợi ý cá nhân hóa</div>
+        <h2 id="tipsTitle">Vận động &amp; dinh dưỡng</h2>
+      </div>
+    </div>
+    <div class="tips-grid">
+      <div class="tips-col">
+        <div class="col-head">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="1.8">
+            <circle cx="12" cy="5" r="2"/>
+            <path d="M12 7v5l-3 7M12 12l3 7M9 12H4l2-4M15 12h5l-2-4"/>
+          </svg>
+          <h3>Gợi ý vận động</h3>
+        </div>
+        <ul id="sportList"></ul>
+      </div>
+      <div class="tips-col">
+        <div class="col-head">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="1.8">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M12 3v18M4 9c2 1.2 4 1.2 8 0s6-1.2 8 0M4 15c2-1.2 4-1.2 8 0s6 1.2 8 0"/>
+          </svg>
+          <h3>Nguyên tắc dinh dưỡng</h3>
+        </div>
+        <ul id="nutriList"></ul>
+      </div>
+    </div>
+    <div class="tips-note" id="tipsNote"></div>
+
+    <div class="links-wrap">
+      <div class="links-eyebrow">Hình ảnh &amp; tài liệu tham khảo uy tín</div>
+      <div class="links-grid">
+        <a class="link-card" href="https://www.acefitness.org/resources/everyone/exercise-library/" target="_blank" rel="noopener">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="1.8"><path d="M6 7v10M18 7v10M2 10v4M22 10v4M6 12h12"/></svg>
+          <span>
+            <span class="lc-title">ACE Fitness — Exercise Library</span>
+            <span class="lc-desc">Thư viện hình ảnh &amp; video hướng dẫn tư thế cho hàng trăm bài tập, phân loại theo nhóm cơ và cấp độ.</span>
+          </span>
+          <span class="lc-arrow">↗</span>
+        </a>
+        <a class="link-card" href="https://www.who.int/news-room/fact-sheets/detail/physical-activity" target="_blank" rel="noopener">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18 14 14 0 010-18z"/></svg>
+          <span>
+            <span class="lc-title">WHO — Physical Activity Fact Sheet</span>
+            <span class="lc-desc">Khuyến nghị chính thức của Tổ chức Y tế Thế giới về thời lượng và cường độ vận động theo từng nhóm tuổi.</span>
+          </span>
+          <span class="lc-arrow">↗</span>
+        </a>
+        <a class="link-card" href="https://nutritionsource.hsph.harvard.edu/healthy-eating-plate/" target="_blank" rel="noopener">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6 3"/></svg>
+          <span>
+            <span class="lc-title">Harvard — Healthy Eating Plate</span>
+            <span class="lc-desc">Hình ảnh minh họa "chiếc đĩa ăn lành mạnh" của Đại học Harvard, chia tỷ lệ rau củ, đạm và tinh bột trực quan.</span>
+          </span>
+          <span class="lc-arrow">↗</span>
+        </a>
+        <a class="link-card" href="https://viendinhduong.vn/" target="_blank" rel="noopener">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--teal-deep)" stroke-width="1.8"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/></svg>
+          <span>
+            <span class="lc-title">Viện Dinh dưỡng Quốc gia (Bộ Y tế VN)</span>
+            <span class="lc-desc">Công cụ tra cứu giá trị dinh dưỡng thực phẩm Việt Nam và lời khuyên dinh dưỡng hợp lý theo từng độ tuổi.</span>
+          </span>
+          <span class="lc-arrow">↗</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="footnote">
+    <b>Công thức sử dụng:</b> Chỉ số khối cơ thể BMI = cân nặng (kg) ÷ chiều cao² (m²), phân loại theo chuẩn của Tổ chức Y tế Thế giới (WHO) áp dụng cho người châu Á (ngưỡng thừa cân/béo phì thấp hơn chuẩn chung một chút, theo khuyến nghị của Tổ chức Y tế Thế giới khu vực Tây Thái Bình Dương – WPRO). Khoảng cân nặng lý tưởng được quy đổi từ ngưỡng BMI 18,5–22,9. Với người từ 65 tuổi trở lên, nhiều hướng dẫn lão khoa cho phép ngưỡng BMI cao hơn một chút (đến khoảng 27) vì thừa cân nhẹ ở người lớn tuổi có liên quan đến tỷ lệ tử vong thấp hơn, nên công cụ nới nhẹ khoảng khuyến nghị cho nhóm tuổi này. Kết quả chỉ mang tính tham khảo, không thay thế tư vấn của bác sĩ hoặc chuyên gia dinh dưỡng — đặc biệt với phụ nữ mang thai, vận động viên có tỷ lệ cơ cao, hoặc người có bệnh lý nền.
+  </div>
+</div>
+
+<script>
+let gender = 'nam';
+document.getElementById('genderSeg').addEventListener('click', e=>{
+  if(e.target.tagName==='BUTTON'){
+    gender = e.target.dataset.val;
+    document.querySelectorAll('#genderSeg button').forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
+  }
+});
+
+function classify(bmi, isElderly){
+  // Ngưỡng WHO/WPRO cho người châu Á, nới nhẹ cho người cao tuổi
+  const upperNormal = isElderly ? 25.9 : 22.9;
+  const overThresh = isElderly ? 30 : 25;
+  if(bmi < 18.5) return {label:'Thiếu cân', cls:'cat-under'};
+  if(bmi < upperNormal+0.001) return {label:'Bình thường', cls:'cat-normal'};
+  if(bmi < overThresh) return {label:'Thừa cân', cls:'cat-over'};
+  return {label:'Béo phì', cls:'cat-obese'};
+}
+
+function getTips(deltaType, isElderly){
+  let sports = [];
+  let nutri = [];
+  let note = '';
+
+  if(deltaType === 'up'){
+    sports = [
+      isElderly
+        ? '<b>Tập kháng lực nhẹ</b> với dây thun hoặc tạ tay nhỏ, 2–3 buổi/tuần, để giữ khối cơ.'
+        : '<b>Tập kháng lực (tạ, máy tập, bài tập với trọng lượng cơ thể)</b> 3–4 buổi/tuần để tăng khối cơ thay vì chỉ tích mỡ.',
+      'Đi bộ nhanh hoặc bơi nhẹ nhàng để tăng cảm giác ngon miệng và cải thiện tuần hoàn, không cần cardio cường độ cao.',
+      'Ưu tiên nghỉ ngơi đầy đủ giữa các buổi tập để cơ có thời gian phục hồi và phát triển.'
+    ];
+    nutri = [
+      'Ăn thành <b>5–6 bữa nhỏ/ngày</b> thay vì 3 bữa lớn, giúp nạp năng lượng đều đặn mà không bị quá no.',
+      'Ưu tiên thực phẩm giàu đạm trong mỗi bữa: thịt, cá, trứng, sữa, đậu phụ, các loại đậu.',
+      'Bổ sung chất béo lành mạnh (dầu ô liu, bơ, các loại hạt) và tinh bột phức hợp (gạo lứt, khoai, yến mạch) để tăng calo một cách có lợi cho sức khỏe.',
+      'Hạn chế lấp đầy bụng bằng đồ ăn vặt ít dinh dưỡng; chọn thực phẩm giàu năng lượng nhưng vẫn giàu vi chất.'
+    ];
+    note = 'Nếu đã cố gắng ăn uống đầy đủ mà vẫn khó tăng cân, nên kiểm tra sức khỏe tổng quát để loại trừ các nguyên nhân bệnh lý (tuyến giáp, tiêu hóa...).';
+  } else if(deltaType === 'down'){
+    sports = [
+      isElderly
+        ? 'Đi bộ, dưỡng sinh, thái cực quyền hoặc bơi lội — cường độ nhẹ đến vừa, 5 buổi/tuần, nhẹ nhàng cho khớp.'
+        : '<b>Cardio đều đặn</b> (đi bộ nhanh, chạy bộ, đạp xe, bơi) — khoảng 150–300 phút/tuần theo khuyến nghị của WHO.',
+      'Kết hợp <b>tập kháng lực</b> 2–3 buổi/tuần để giữ khối cơ, giúp cơ thể đốt năng lượng hiệu quả hơn kể cả lúc nghỉ.',
+      'Tăng vận động trong sinh hoạt hằng ngày: đi cầu thang bộ, đi bộ thay vì đi xe cho quãng đường ngắn.'
+    ];
+    nutri = [
+      'Tạo mức thâm hụt năng lượng vừa phải (không nhịn ăn cực đoan) bằng cách giảm khẩu phần và chọn thực phẩm ít calo nhưng no lâu.',
+      'Ưu tiên rau xanh, chất xơ và đạm nạc (ức gà, cá, đậu phụ) trong mỗi bữa ăn.',
+      'Chọn tinh bột nguyên cám (gạo lứt, yến mạch) thay vì tinh bột tinh chế; hạn chế đồ chiên rán, đồ ngọt và nước có ga.',
+      'Uống đủ nước, ăn chậm và chú ý cảm giác no để tránh ăn quá mức.'
+    ];
+    note = 'Không nên giảm cân quá nhanh (an toàn thường là 0,5–1 kg/tuần). Nếu có bệnh nền hoặc BMI ở mức béo phì, nên có sự đồng hành của bác sĩ hoặc chuyên gia dinh dưỡng.';
+  } else {
+    sports = [
+      'Duy trì kết hợp cardio (đi bộ, chạy, bơi, đạp xe) và tập kháng lực, tổng cộng 150–300 phút/tuần.',
+      'Đa dạng hóa hình thức vận động (yoga, bóng đá, cầu lông...) để duy trì động lực lâu dài.',
+      isElderly ? 'Ưu tiên các bài tập giữ thăng bằng và linh hoạt khớp để phòng ngừa té ngã.' : 'Xen kẽ các buổi tập cường độ cao và nhẹ nhàng để cơ thể có thời gian hồi phục.'
+    ];
+    nutri = [
+      'Duy trì chế độ ăn cân bằng với đủ 4 nhóm chất: đạm, tinh bột, chất béo, rau củ quả.',
+      'Ưu tiên thực phẩm tươi, ít chế biến sẵn; hạn chế đường và muối.',
+      'Ăn đúng giờ, đủ bữa, và điều chỉnh khẩu phần theo mức độ vận động hằng ngày.'
+    ];
+    note = 'Cân nặng của bạn đang trong khoảng khỏe mạnh — mục tiêu bây giờ là duy trì thói quen tốt lâu dài hơn là thay đổi lớn.';
+  }
+
+  return {sports, nutri, note};
+}
+
+function tinhToan(){
+  const age = parseFloat(document.getElementById('age').value);
+  const heightCm = parseFloat(document.getElementById('height').value);
+  const weight = parseFloat(document.getElementById('weight').value);
+
+  const resultCard = document.getElementById('resultCard');
+
+  if(!age || !heightCm || !weight || age<=0 || heightCm<=0 || weight<=0){
+    resultCard.innerHTML = '<div class="placeholder" style="color:#A93E33;">Vui lòng nhập đầy đủ tuổi, chiều cao và cân nặng hợp lệ.</div>';
+    return;
+  }
+
+  const h = heightCm/100;
+  const bmi = weight/(h*h);
+  const isElderly = age>=65;
+  const cat = classify(bmi, isElderly);
+
+  // Khoảng cân nặng lý tưởng theo BMI 18.5 - (22.9 hoặc 25.9 nếu cao tuổi)
+  const upperBmi = isElderly ? 25.9 : 22.9;
+  const minIdeal = 18.5*h*h;
+  const maxIdeal = upperBmi*h*h;
+  const midIdeal = (minIdeal+maxIdeal)/2;
+
+  // Công thức Broca hiệu chỉnh theo giới tính (tham chiếu, phổ biến tại VN)
+  let broca;
+  if(gender==='nam'){
+    broca = (heightCm-100) - (heightCm-150)/4;
+  } else {
+    broca = (heightCm-100) - (heightCm-150)/2;
+  }
+
+  let delta = 0;
+  let deltaLabel = '';
+  if(weight < minIdeal){
+    delta = minIdeal - weight;
+    deltaLabel = 'Nên TĂNG khoảng';
+  } else if(weight > maxIdeal){
+    delta = weight - maxIdeal;
+    deltaLabel = 'Nên GIẢM khoảng';
+  } else {
+    delta = 0;
+    deltaLabel = 'Cân nặng đã trong khoảng lý tưởng';
+  }
+
+  // Vị trí marker trên thang BMI 15-35 (thấp -> cao, track chạy từ dưới lên)
+  const bmiMin=15, bmiMax=35;
+  let pct = (bmi-bmiMin)/(bmiMax-bmiMin);
+  pct = Math.max(0, Math.min(1, pct));
+  const trackHeight = 260;
+  const markerBottom = pct*trackHeight;
+
+  // Các mốc trên thang
+  const ticks = [
+    {v:15,label:'15'},
+    {v:18.5,label:'18,5'},
+    {v:upperBmi,label:upperBmi.toFixed(1).replace('.',',')},
+    {v:isElderly?30:25,label:isElderly?'30':'25'},
+    {v:35,label:'35'}
+  ];
+  let ticksHtml = '';
+  ticks.forEach(t=>{
+    let p=(t.v-bmiMin)/(bmiMax-bmiMin);
+    p=Math.max(0,Math.min(1,p));
+    const bottom = p*trackHeight;
+    ticksHtml += `<div class="tick" style="bottom:${bottom}px;"><span>${t.label}</span></div>`;
+  });
+
+  resultCard.innerHTML = `
+    <div class="result-top">
+      <div class="gauge-col">
+        <div class="gauge-track" style="position:relative;">
+          ${ticksHtml}
+          <div class="marker" style="bottom:${markerBottom}px;"></div>
+        </div>
+      </div>
+      <div class="result-main">
+        <div class="bmi-readout">${bmi.toFixed(1)}</div>
+        <span class="bmi-cat ${cat.cls}">${cat.label}</span>
+
+        <div class="range-line">
+          Khoảng cân nặng khỏe mạnh với chiều cao ${heightCm} cm: <b>${minIdeal.toFixed(1)} – ${maxIdeal.toFixed(1)} kg</b>
+        </div>
+        <div class="range-line">
+          Tham chiếu công thức Broca (${gender==='nam'?'nam':'nữ'}): <b>~${broca.toFixed(1)} kg</b>
+        </div>
+
+        <div class="delta-box">
+          ${delta>0 ? `
+            <div class="delta-num">${delta.toFixed(1)} kg</div>
+            <div class="delta-desc">${deltaLabel} để đạt mức cân nặng khỏe mạnh (mốc gần nhất trong khoảng lý tưởng).</div>
+          ` : `
+            <div class="delta-num" style="color:var(--teal-deep);">0 kg</div>
+            <div class="delta-desc">${deltaLabel}. Duy trì chế độ ăn cân bằng và vận động đều đặn để giữ vóc dáng.</div>
+          `}
+        </div>
+      </div>
+    </div>
+  `;
+
+  // ---- Gợi ý thể thao & dinh dưỡng ----
+  let deltaType = 'maintain';
+  if(weight < minIdeal) deltaType = 'up';
+  else if(weight > maxIdeal) deltaType = 'down';
+
+  const tips = getTips(deltaType, isElderly);
+  const titleMap = {
+    up: 'Vận động & dinh dưỡng để tăng cân lành mạnh',
+    down: 'Vận động & dinh dưỡng để giảm cân lành mạnh',
+    maintain: 'Vận động & dinh dưỡng để duy trì cân nặng'
+  };
+  document.getElementById('tipsTitle').textContent = titleMap[deltaType];
+  document.getElementById('sportList').innerHTML = tips.sports.map(s=>`<li>${s}</li>`).join('');
+  document.getElementById('nutriList').innerHTML = tips.nutri.map(s=>`<li>${s}</li>`).join('');
+  document.getElementById('tipsNote').textContent = tips.note;
+  document.getElementById('tipsCard').style.display = 'block';
+}
+</script>
+</body>
+</html>
